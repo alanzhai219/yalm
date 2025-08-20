@@ -6,13 +6,13 @@
 #include <sstream>
 #include <stdio.h>
 
-#include "fmt/format.h"
+#include "vendor/fmt/format.h"
 
-#include "codec.h"
-#include "model.h"
-#include "sampler.h"
-#include "time.h"
-#include "tokenizer.h"
+#include "src/codec.h"
+#include "src/model.h"
+#include "src/sampler.h"
+#include "src/time.h"
+#include "src/tokenizer.h"
 
 void error_usage() {
   fprintf(stderr, "Usage:   main <checkpoint> [options]\n");

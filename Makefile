@@ -1,98 +1,90 @@
-MAKEFLAGS+=-r -j
+USE_CUDA ?= OFF
+USE_SYCL ?= OFF
 
-UNAME=$(shell uname)
+$(info USE_CUDA=$(USE_CUDA))
+$(info USE_SYCL=$(USE_SYCL))
 
-NVCC?=nvcc
+CXX?=gcc
 
-BUILD=build
-ASM_DIR=$(BUILD)/asm
+ifeq ($(USE_SYCL), ON)
+ICPX?=icpx
+endif
 
-# compile .c, .cpp, .cu files
-SOURCES=$(filter-out src/test.cpp,$(wildcard src/*.c))
-SOURCES+=$(filter-out src/test.cpp,$(wildcard src/*.cc))
-SOURCES+=$(filter-out src/test.cpp,$(wildcard src/*.cpp))
-SOURCES+=$(filter-out src/test.cpp,$(wildcard src/*.cu))
-SOURCES+=$(wildcard vendor/*.c)
-SOURCES+=$(wildcard vendor/*.cc)
-SOURCES+=$(wildcard vendor/*.cpp)
-SOURCES+=$(wildcard vendor/*.cu)
+# source code
+ALL_C_CPP_SOURCES=$(wildcard src/*.c src/*.cc src/*.cpp)
+ALL_C_CPP_SOURCES+=$(wildcard vendor/*.c vendor/*.cc vendor/*.cpp)
 
-# Define test sources separately
-TEST_SOURCES=src/test.cpp
-TEST_SOURCES+=$(filter-out src/main.cpp,$(SOURCES))
+ALL_CUDA_SOURCES=$(wildcard src/*.cu)
+ALL_CUDA_SOURCES+=$(wildcard vendor/*.cu)
 
-OBJECTS=$(SOURCES:%=$(BUILD)/%.o)
-TEST_OBJECTS=$(TEST_SOURCES:%=$(BUILD)/%.o)
-ASM_FILES=$(patsubst %.cpp,$(ASM_DIR)/%.s,$(filter %.cpp,$(SOURCES)))
-TEST_ASM_FILES=$(patsubst %.cpp,$(ASM_DIR)/%.s,$(filter %.cpp,$(TEST_SOURCES)))
+# --- Source Code Definition ---
+# 1. Gather all source files from all relevant directories.
+ALL_SOURCES := $(wildcard src/*.c src/*.cc src/*.cpp src/*.cu)
+ALL_SOURCES += $(wildcard vendor/*.c vendor/*.cc vendor/*.cpp vendor/*.cu)
 
-BINARY=$(BUILD)/main
-TEST_BINARY=$(BUILD)/test
+# 2. Define files that are entry points for other targets (e.g., tests).
+MAIN_FILE=main.cpp
+TEST_FILE=test.cpp
 
-CFLAGS=-g -Wall -Wpointer-arith -Werror -O3 -ffast-math -Ivendor -std=c++20
-LDFLAGS=-lm
+# 3. The final list of sources for the main binary is everything except the test files.
+SOURCES ?= $(ALL_SOURCES)
+SOURCES += $(MAIN_FILE)
 
+# build directory
+BUILD_DIR=build
+OBJECTS=$(SOURCES:%=$(BUILD_DIR)/%.o)
+
+BINARY_MAIN=$(BUILD_DIR)/main
+# @todo
+BINARY_TEST=$(BUILD_DIR)/test
+
+CFLAGS=-g -Wall -Wpointer-arith -Werror -O3 -ffast-math -Ivendor -std=c++2a
 CFLAGS+=-fopenmp -mf16c -mavx2 -mfma
+
+LDFLAGS=-lm
 LDFLAGS+=-fopenmp
-LDFLAGS+=-lcudart
 
-ifneq (,$(wildcard /usr/local/cuda))
-  LDFLAGS+=-L/usr/local/cuda/lib64
-  CFLAGS+=-I/usr/local/cuda/include
+ifeq ($(USE_CUDA), ON)
+	NVCC?=nvcc
+  	CFLAGS+=-I/usr/local/cuda/include
+	LDFLAGS+=-lcudart
+  	LDFLAGS+=-L/usr/local/cuda/lib64
+
+	CUFLAGS+=-O2 -lineinfo -Ivendor
+	CUFLAGS+=-allow-unsupported-compiler # for recent CUDA versions
+  	CUFLAGS+=-gencode arch=compute_80,code=sm_80 --threads 2
 endif
 
-CUFLAGS+=-O2 -lineinfo -Ivendor
-CUFLAGS+=-allow-unsupported-compiler # for recent CUDA versions
-
-ifeq ($(CUARCH),)
-  CUFLAGS+=-gencode arch=compute_80,code=sm_80 -gencode arch=compute_90,code=sm_90 --threads 2
-else
-  CUFLAGS+=-arch=$(CUARCH)
+ifeq ($(USE_SYCL), ON)
+	$(info "No Supported!")
 endif
 
-all: $(BINARY) asm
+# 
+all: $(BINARY_MAIN)
 
-test: $(TEST_BINARY) test-asm
+main: $(BINARY_MAIN)
 
-# Target to build just assembly files
-asm: $(ASM_FILES)
+# @todo
+test: $(BINARY_TEST)
 
-test-asm: $(TEST_ASM_FILES)
-
-format:
-	clang-format -i src/*
-
-$(BINARY): $(OBJECTS)
+$(BINARY_MAIN): $(OBJECTS)
 	$(CXX) $^ $(LDFLAGS) -o $@
 
-$(TEST_BINARY): $(TEST_OBJECTS)
-	$(CXX) $^ $(LDFLAGS) -o $@
-
-# Rule to generate assembly for cpp files
-$(ASM_DIR)/%.s: %.cpp
-	@mkdir -p $(dir $@)
-	$(CXX) $< $(CFLAGS) -S -masm=intel -o $@
-
-$(BUILD)/%.c.o: %.c
+$(BUILD_DIR)/%.c.o: %.c
 	@mkdir -p $(dir $@)
 	$(CXX) $< $(CFLAGS) -c -MMD -MP -o $@
 
-$(BUILD)/%.cpp.o: %.cpp
+$(BUILD_DIR)/%.cpp.o: %.cpp
 	@mkdir -p $(dir $@)
 	$(CXX) $< $(CFLAGS) -c -MMD -MP -o $@
 
-$(BUILD)/%.cc.o: %.cc
+$(BUILD_DIR)/%.cc.o: %.cc
 	@mkdir -p $(dir $@)
 	$(CXX) $< $(CFLAGS) -c -MMD -MP -o $@
 
-$(BUILD)/%.cu.o: %.cu
+$(BUILD_DIR)/%.cu.o: %.cu
 	@mkdir -p $(dir $@)
 	$(NVCC) $< $(CUFLAGS) -c -MMD -MP -o $@
 
--include $(OBJECTS:.o=.d)
--include $(TEST_OBJECTS:.o=.d)
-
 clean:
-	rm -rf $(BUILD)
-
-.PHONY: all clean format test asm test-asm
+	rm -rf $(BUILD_DIR)
