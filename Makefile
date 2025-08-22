@@ -14,13 +14,20 @@ endif
 ALL_C_CPP_SOURCES=$(wildcard src/*.c src/*.cc src/*.cpp)
 ALL_C_CPP_SOURCES+=$(wildcard vendor/*.c vendor/*.cc vendor/*.cpp)
 
-ALL_CUDA_SOURCES=$(wildcard src/*.cu)
+ALL_CUDA_SOURCES:=
+ifeq ($(USE_CUDA), ON)
+ALL_CUDA_SOURCES+=$(wildcard src/*.cu)
 ALL_CUDA_SOURCES+=$(wildcard vendor/*.cu)
+endif
 
 # --- Source Code Definition ---
 # 1. Gather all source files from all relevant directories.
-ALL_SOURCES := $(wildcard src/*.c src/*.cc src/*.cpp src/*.cu)
-ALL_SOURCES += $(wildcard vendor/*.c vendor/*.cc vendor/*.cpp vendor/*.cu)
+# ALL_SOURCES := $(wildcard src/*.c src/*.cc src/*.cpp src/*.cu)
+# ALL_SOURCES += $(wildcard vendor/*.c vendor/*.cc vendor/*.cpp vendor/*.cu)
+ALL_SOURCES := $(ALL_C_CPP_SOURCES)
+ifeq ($(USE_CUDA), ON)
+	ALL_SOURCES += $(ALL_CUDA_SOURCES)
+endif
 
 # 2. Define files that are entry points for other targets (e.g., tests).
 MAIN_FILE=main.cpp
@@ -46,6 +53,7 @@ LDFLAGS+=-fopenmp
 
 ifeq ($(USE_CUDA), ON)
 	NVCC?=nvcc
+	CFLAGS+=-DUSE_CUDA=$(USE_CUDA)
   	CFLAGS+=-I/usr/local/cuda/include
 	LDFLAGS+=-lcudart
   	LDFLAGS+=-L/usr/local/cuda/lib64

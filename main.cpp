@@ -19,7 +19,7 @@ void error_usage() {
   fprintf(stderr, "Example: main model.yalm -i \"Q: What is the meaning of life?\"\n");
   fprintf(stderr, "Options:\n");
   fprintf(stderr, "  -h Display this help message\n");
-  fprintf(stderr, "  -d [cpu,cuda] which device to use (default - cuda)\n");
+  fprintf(stderr, "  -d [cpu,cuda] which device to use (default - cpu)\n");
   fprintf(stderr, "  -m [completion,passkey,perplexity] which mode to run in (default - completion)\n");
   fprintf(stderr, "  -T <int> sliding window context length (0 - max)\n");
   fprintf(stderr, "\n");
@@ -39,7 +39,7 @@ void error_usage() {
   exit(1);
 }
 
-#if DEBUG_MODEL
+#if DEBUG_MODEL && USE_CUDA
 void debug_tensors(Config& c) {
   assert(debug_map_cpu().size() == debug_map_cuda().size());
   for (auto& [name, cpu] : debug_map_cpu()) {
@@ -72,11 +72,13 @@ void run_completion(
     // `-n 0` means use the full context length
     num_steps = model.config->max_seq_len;
   }
+  #ifdef USE_CUDA
   if (device == "cuda") {
     std::cout << "Using CUDA" << std::endl;
     model.cuda();
     state.cuda();
   }
+  #endif
 
   // Do one inference as warmup.
   // On CPU, this ensures all tensors are loaded into memory via mmap.
@@ -162,11 +164,13 @@ void run_perplexity(
 
   std::cout << "Model active bytes with full context window: " << model.config->active_bytes(model.config->max_seq_len) << std::endl;
 
+#ifdef USE_CUDA
   if (device == "cuda") {
     std::cout << "Using CUDA" << std::endl;
     model.cuda();
     state.cuda();
   }
+#endif
 
   // Do one inference as warmup.
   // On CPU, this ensures all tensors are loaded into memory via mmap.
@@ -250,11 +254,13 @@ void run_passkey(
 
   std::cout << "Model active bytes with full context window: " << model.config->active_bytes(model.config->max_seq_len) << std::endl;
 
+#ifdef USE_CUDA
   if (device == "cuda") {
     std::cout << "Using CUDA" << std::endl;
     model.cuda();
     state.cuda();
   }
+#endif
 
   // Do one inference as warmup.
   // On CPU, this ensures all tensors are loaded into memory via mmap.
@@ -334,7 +340,7 @@ void run_passkey(
 int main(int argc, char* argv[]) {
   std::string checkpoint_path = "";    // e.g. out/model.bin
   // Options
-  std::string device = "cuda";         // cpu or cuda
+  std::string device = "cpu";         // cpu or cuda
   std::string mode = "completion";     // completion, passkey, or perplexity
   std::string prompt = "";             // prompt string
   std::string prompt_path = "";        // prompt file path
@@ -388,8 +394,10 @@ int main(int argc, char* argv[]) {
       device = argv[i + 1];
       if (std::string("cpu").starts_with(device)) {
         device = "cpu";
+#ifdef USE_CUDA
       } else if (std::string("cuda").starts_with(device)) {
         device = "cuda";
+#endif
       } else {
         error_usage();
       }

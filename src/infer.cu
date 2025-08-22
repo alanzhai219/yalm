@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 #include "model.h"
 
 #include <cuda_fp16.h>
@@ -1240,3 +1241,4 @@ void CudaGraph::add_or_update_kernel_node(std::string key, cudaKernelNodeParams 
     CUDA_CHECK(cudaGraphExecKernelNodeSetParams(instance, nodes[key], &params));
   }
 }
+#endif // USE_CUDA

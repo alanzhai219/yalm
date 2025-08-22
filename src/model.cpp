@@ -206,12 +206,15 @@ Block::~Block() {
   if (_device == Device::CPU) {
     delete[] _key_cache;
     delete[] _value_cache;
+#ifdef USE_CUDA
   } else {
     free_cuda(_key_cache);
     free_cuda(_value_cache);
+#endif
   }
 }
 
+#ifdef USE_CUDA
 void Block::cuda() {
   if (_device != Device::CPU) {
     return;
@@ -237,6 +240,7 @@ void Block::cuda() {
   _key_cache = static_cast<f16_t*>(upload_cuda(_key_cache, _config->max_seq_len * _config->n_kv_heads * _config->head_dim * sizeof(f16_t)));
   _value_cache = static_cast<f16_t*>(upload_cuda(_value_cache, _config->max_seq_len * _config->n_kv_heads * _config->head_dim * sizeof(f16_t)));
 }
+#endif
 
 void Block::block(
   InferenceState& s,  // inference state
@@ -245,21 +249,8 @@ void Block::block(
   int kv_pos,         // index of the current token in the kv cache, must be in [0..kv_len) since kv cache is a ring buffer
   int kv_len          // number of tokens in the kv cache that we will attend over
 ) const {
-  if (_device == Device::CUDA) {
-    switch (_config->weight_dtype) {
-      case DType::F32: {
-        _block_cuda<float>(s, pos, kv_sink, kv_pos, kv_len);
-        break;
-      }
-      case DType::F16: {
-        _block_cuda<f16_t>(s, pos, kv_sink, kv_pos, kv_len);
-        break;
-      }
-      default: {
-        assert(false && "unsupported weight dtype for cuda");
-      }
-    }
-  } else {
+
+  if (_device == Device::CPU) {
     switch (_config->weight_dtype) {
       case DType::F32: {
         _block_cpu<float>(s, pos, kv_sink, kv_pos, kv_len);
@@ -277,6 +268,22 @@ void Block::block(
         assert(false && "unsupported weight dtype for cpu");
       }
     }
+#ifdef USE_CUDA
+  } else if (_device == Device::CUDA) {
+    switch (_config->weight_dtype) {
+      case DType::F32: {
+        _block_cuda<float>(s, pos, kv_sink, kv_pos, kv_len);
+        break;
+      }
+      case DType::F16: {
+        _block_cuda<f16_t>(s, pos, kv_sink, kv_pos, kv_len);
+        break;
+      }
+      default: {
+        assert(false && "unsupported weight dtype for cuda");
+      }
+    }
+#endif
   }
 
 }
@@ -314,6 +321,7 @@ InferenceState::~InferenceState() {
     delete[] _moe_weights;
     delete[] _active_experts;
     delete[] _active_experts_weights;
+#ifdef USE_CUDA
   } else {
     free_cuda(_x);
     free_cuda(_xb);
@@ -329,9 +337,11 @@ InferenceState::~InferenceState() {
     free_cuda(_moe_weights);
     free_cuda(_active_experts);
     free_cuda(_active_experts_weights);
+#endif
   }
 }
 
+#ifdef USE_CUDA
 void InferenceState::cuda() {
   if (_device != Device::CPU) {
     return;
@@ -352,6 +362,7 @@ void InferenceState::cuda() {
   _active_experts = static_cast<int*>(upload_cuda(_active_experts, _config->n_experts_active * sizeof(int)));
   _active_experts_weights = static_cast<float*>(upload_cuda(_active_experts_weights, _config->n_experts_active * sizeof(float)));
 }
+#endif
 
 Model::Model(YALMData& yalm, int context) {
   config = std::make_shared<Config>();
@@ -398,6 +409,7 @@ Model::Model(YALMData& yalm, int context) {
   }
 }
 
+#ifdef USE_CUDA
 void Model::cuda() {
   if (_device != Device::CPU) {
     return;
@@ -413,6 +425,7 @@ void Model::cuda() {
   rms_final_weight = static_cast<float*>(upload_cuda(rms_final_weight, config->dim * sizeof(float)));
   wcls = upload_cuda(wcls, config->vocab_size * config->dim * weight_size);
 }
+#endif
 
 void Model::forward(InferenceState& s, int token, int pos, InferenceMode mode) {
   if (s.device() != _device) {
@@ -420,10 +433,12 @@ void Model::forward(InferenceState& s, int token, int pos, InferenceMode mode) {
     assert(false);
     return;
   }
-  if (_device == Device::CUDA) {
-    _forward_cuda(s, token, pos, mode);
-  } else {
+  if (_device == Device::CPU) {
     _forward_cpu(s, token, pos, mode);
+#ifdef USE_CUDA
+  } else if (_device == Device::CUDA) {
+    _forward_cuda(s, token, pos, mode);
+#endif
   }
 }
 
