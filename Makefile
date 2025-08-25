@@ -46,7 +46,7 @@ BINARY_MAIN=$(BUILD_DIR)/main
 BINARY_TEST=$(BUILD_DIR)/test
 
 # CFLAGS=-g -Wall -Wpointer-arith -Werror -O3 -ffast-math -Ivendor -std=c++2a -DUSE_CUDA=$(USE_CUDA)
-CFLAGS=-g -Wall -Wpointer-arith -O3 -ffast-math -Ivendor -std=c++2a -DUSE_CUDA=$(USE_CUDA)
+CFLAGS=-g -Wall -Wpointer-arith -O3 -ffast-math -Ivendor -std=c++2a
 CFLAGS+=-fopenmp -mf16c -mavx2 -mfma
 
 LDFLAGS=-lm
@@ -55,13 +55,15 @@ LDFLAGS+=-fopenmp
 ifeq ($(USE_CUDA), ON)
 	NVCC?=nvcc
   	CFLAGS+=-I/usr/local/cuda/include
+	CFLAGS+=-DUSE_CUDA=$(USE_CUDA)
 	LDFLAGS+=-lcudart
   	LDFLAGS+=-L/usr/local/cuda/lib64
 
 	CUFLAGS+=-O2 -lineinfo -Ivendor
 	CUFLAGS+=-DUSE_CUDA=$(USE_CUDA)
+	CUFLAGS+=-rdc=true
 	CUFLAGS+=-allow-unsupported-compiler # for recent CUDA versions
-  	CUFLAGS+=-gencode arch=compute_80,code=sm_80 --threads 2
+  CUFLAGS+=-gencode arch=compute_80,code=sm_80 --threads 2
 endif
 
 ifeq ($(USE_SYCL), ON)

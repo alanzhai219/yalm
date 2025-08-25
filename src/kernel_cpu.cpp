@@ -4,7 +4,7 @@
 #include <cmath>
 #include "immintrin.h"
 #include "f16cintrin.h"
-#include "kernel.h"
+#include "kernel_cpu.h"
 #include "utils.h"
 
 void matmul_cpu(float* xout, float* x, float* w, int n, int d) {

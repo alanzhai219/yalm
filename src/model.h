@@ -3,6 +3,7 @@
 #include "codec.h"
 #ifdef USE_CUDA
 #include "cuda_runtime_api.h"
+// #include "helper_cuda.h"
 #endif
 
 #include <memory>
@@ -14,15 +15,15 @@
 
 constexpr int KV_SINKS = 2;
 
-#ifdef USE_CUDA
-extern "C" void* upload_cuda(void* host, size_t size);
-extern "C" void* download_cuda(void* device, size_t size, std::string debug);
-extern "C" void register_cuda_host(void* host, size_t size);
-extern "C" void free_cuda(void* device);
-extern "C" void unregister_cuda_host(void* host);
-extern "C" void set_cuda_device(int device);
-extern "C" void init_cuda_stream(cudaStream_t* stream);
-#endif
+// #ifdef USE_CUDA
+// extern "C" void* upload_cuda(void* host, size_t size);
+// extern "C" void* download_cuda(void* device, size_t size, std::string debug);
+// extern "C" void register_cuda_host(void* host, size_t size);
+// extern "C" void free_cuda(void* device);
+// extern "C" void unregister_cuda_host(void* host);
+// extern "C" void set_cuda_device(int device);
+// extern "C" void init_cuda_stream(cudaStream_t* stream);
+// #endif
 
 struct Config {
   int dim;                  // transformer input & output dimension
@@ -295,28 +296,28 @@ std::map<std::string, DebugTensor>& debug_map_cuda();
 ////////////////////////////////////////
 // Exposed for tests
 ////////////////////////////////////////
-#ifdef USE_CUDA
-void mha_cuda(
-  float* xout,  // (n_heads, head_dim)
-  float* att,   // (n_heads, max_seq_len)
-  f16_t* kb,    // (max_seq_len, n_kv_heads, head_dim)
-  f16_t* vb,    // (max_seq_len, n_kv_heads, head_dim)
-  float* q,     // (n_heads, head_dim)
-  int head_dim, int kv_len, int max_seq_len, int n_heads, int n_kv_heads
-);
-
-template <typename T>
-void matmul_cuda(float* xout, float* x, T* w, int n, int d);
-
-
-template <typename T>
-void ffn_cuda(
-  float* xout, float* x, 
-  T* w1, T* w2, T* w3, 
-  int hidden_dim, int dim,
-  ActivationType act
-);
-#endif
+// #ifdef USE_CUDA
+// void mha_cuda(
+//   float* xout,  // (n_heads, head_dim)
+//   float* att,   // (n_heads, max_seq_len)
+//   f16_t* kb,    // (max_seq_len, n_kv_heads, head_dim)
+//   f16_t* vb,    // (max_seq_len, n_kv_heads, head_dim)
+//   float* q,     // (n_heads, head_dim)
+//   int head_dim, int kv_len, int max_seq_len, int n_heads, int n_kv_heads
+// );
+// 
+// template <typename T>
+// void matmul_cuda(float* xout, float* x, T* w, int n, int d);
+// 
+// 
+// template <typename T>
+// void ffn_cuda(
+//   float* xout, float* x, 
+//   T* w1, T* w2, T* w3, 
+//   int hidden_dim, int dim,
+//   ActivationType act
+// );
+// #endif
 // void attn(
 //   float* xout,    // (dim,) - output vector
 //   float* atth,    // (kv_len,) - scratch space to hold attention scores of the sequence

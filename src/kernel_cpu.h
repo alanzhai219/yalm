@@ -29,11 +29,3 @@ float gelu_cpu(float x);
 float silu_cpu(float x);
 
 float clip_cpu(float x, float v);
-
-/* CUDA KERNEL */
-#ifdef USE_CUDA
-#endif
-
-/* SYCL KERNEL */
-#ifdef USE_SYCL
-#endif

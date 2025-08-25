@@ -6,7 +6,7 @@
 
 #include "immintrin.h"
 #include "f16cintrin.h"
-#include "kernel.h"
+#include "kernel_cpu.h"
 #include "utils.h"
 
 #if DEBUG_MODEL

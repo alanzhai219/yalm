@@ -1,5 +1,7 @@
 #include "model.h"
-
+#ifdef USE_CUDA
+#include "helper_cuda.h"
+#endif
 #include "json.hpp"
 #include <algorithm>
 #include <array>

@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 
 using f16_t = uint16_t;
 
