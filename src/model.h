@@ -8,29 +8,11 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include "config.h"
 
 #define DEBUG_MODEL 0
 
 constexpr int KV_SINKS = 2;
-
-enum class ActivationType {
-  GELU,
-  SILU,
-};
-
-enum class LayerNormType {
-  RMSNorm,
-};
-
-enum class Device {
-  CPU,
-  CUDA,
-};
-
-enum class InferenceMode {
-  HYDRATE_KV_CACHE, // only hydrate the KV cache and don't compute output logits
-  OUTPUT_LOGITS // set InferenceState logits to logits for the next token
-};
 
 #ifdef USE_CUDA
 extern "C" void* upload_cuda(void* host, size_t size);
@@ -313,25 +295,6 @@ std::map<std::string, DebugTensor>& debug_map_cuda();
 ////////////////////////////////////////
 // Exposed for tests
 ////////////////////////////////////////
-void attn(
-  float* xout,    // (dim,) - output vector
-  float* atth,    // (kv_len,) - scratch space to hold attention scores of the sequence
-  float* qh,      // (head_dim,) - query vector for this head
-  f16_t* kh,      // (kv_len, n_kv_heads, head_dim) - buffer containing key vectors of the sequence for all KV heads
-  f16_t* vh,      // (kv_len, n_kv_heads, head_dim) - buffer containing value vectors of the sequence for all KV heads
-  int head_dim,   // size of the "key-space"
-  int n_kv_heads, // number of kv heads, can be < n_heads (1 is MultiQueryAttention, >1 is GroupedQueryAttention)
-  int kv_len      // number of tokens of the sequence we will attend over
-);
-
-void mha_cpu(
-  float* xout,  // (n_heads, head_dim)
-  float* att,   // (n_heads, max_seq_len)
-  f16_t* kb,    // (max_seq_len, n_kv_heads, head_dim)
-  f16_t* vb,    // (max_seq_len, n_kv_heads, head_dim)
-  float* q,     // (n_heads, head_dim)
-  int head_dim, int kv_len, int max_seq_len, int n_heads, int n_kv_heads
-);
 #ifdef USE_CUDA
 void mha_cuda(
   float* xout,  // (n_heads, head_dim)
@@ -341,22 +304,11 @@ void mha_cuda(
   float* q,     // (n_heads, head_dim)
   int head_dim, int kv_len, int max_seq_len, int n_heads, int n_kv_heads
 );
-#endif
 
-void matmul_cpu(float* xout, float* x, float* w, int n, int d);
-void matmul_cpu(float* xout, float* x, f16_t* w, int n, int d);
-#ifdef USE_CUDA
 template <typename T>
 void matmul_cuda(float* xout, float* x, T* w, int n, int d);
-#endif
 
-void ffn_cpu(
-  float* xout, float* x, 
-  float* w1, float* w2, float* w3, 
-  int hidden_dim, int dim,
-  ActivationType act
-);
-#ifdef USE_CUDA
+
 template <typename T>
 void ffn_cuda(
   float* xout, float* x, 
@@ -365,4 +317,33 @@ void ffn_cuda(
   ActivationType act
 );
 #endif
+// void attn(
+//   float* xout,    // (dim,) - output vector
+//   float* atth,    // (kv_len,) - scratch space to hold attention scores of the sequence
+//   float* qh,      // (head_dim,) - query vector for this head
+//   f16_t* kh,      // (kv_len, n_kv_heads, head_dim) - buffer containing key vectors of the sequence for all KV heads
+//   f16_t* vh,      // (kv_len, n_kv_heads, head_dim) - buffer containing value vectors of the sequence for all KV heads
+//   int head_dim,   // size of the "key-space"
+//   int n_kv_heads, // number of kv heads, can be < n_heads (1 is MultiQueryAttention, >1 is GroupedQueryAttention)
+//   int kv_len      // number of tokens of the sequence we will attend over
+// );
+// 
+// void mha_cpu(
+//   float* xout,  // (n_heads, head_dim)
+//   float* att,   // (n_heads, max_seq_len)
+//   f16_t* kb,    // (max_seq_len, n_kv_heads, head_dim)
+//   f16_t* vb,    // (max_seq_len, n_kv_heads, head_dim)
+//   float* q,     // (n_heads, head_dim)
+//   int head_dim, int kv_len, int max_seq_len, int n_heads, int n_kv_heads
+// );
+//
+// void ffn_cpu(
+//   float* xout, float* x, 
+//   float* w1, float* w2, float* w3, 
+//   int hidden_dim, int dim,
+//   ActivationType act
+// );
+// void matmul_cpu(float* xout, float* x, float* w, int n, int d);
+// void matmul_cpu(float* xout, float* x, f16_t* w, int n, int d);
+
 ////////////////////////////////////////
