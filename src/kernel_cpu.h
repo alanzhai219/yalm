@@ -1,5 +1,5 @@
 #pragma once
-#include "config.h"
+#include "type.h"
 
 /* CPU KERNEL */
 void matmul_cpu(float* xout, float* x, float* w, int n, int d);

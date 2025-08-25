@@ -1,5 +1,5 @@
 #pragma once
-#include "config.h"
+#include "type.h"
 
 #ifdef USE_CUDA
 #include <cuda_runtime_api.h>

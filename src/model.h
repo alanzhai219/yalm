@@ -9,21 +9,11 @@
 #include <memory>
 #include <vector>
 #include <map>
-#include "config.h"
+#include "type.h"
 
 #define DEBUG_MODEL 0
 
 constexpr int KV_SINKS = 2;
-
-// #ifdef USE_CUDA
-// extern "C" void* upload_cuda(void* host, size_t size);
-// extern "C" void* download_cuda(void* device, size_t size, std::string debug);
-// extern "C" void register_cuda_host(void* host, size_t size);
-// extern "C" void free_cuda(void* device);
-// extern "C" void unregister_cuda_host(void* host);
-// extern "C" void set_cuda_device(int device);
-// extern "C" void init_cuda_stream(cudaStream_t* stream);
-// #endif
 
 struct Config {
   int dim;                  // transformer input & output dimension

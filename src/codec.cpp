@@ -1,4 +1,5 @@
 #include "codec.h"
+#include "utils.h"
 
 #include <fcntl.h>
 #include <iostream>
@@ -6,61 +7,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-std::string dtype_to_string(DType dtype) {
-  switch (dtype) {
-    case DType::F32: return "F32";
-    case DType::F16: return "F16";
-    case DType::BF16: return "BF16";
-    case DType::F8E5M2: return "F8_E5M2";
-    case DType::F8E4M3: return "F8_E4M3";
-    case DType::I32: return "I32";
-    case DType::I16: return "I16";
-    case DType::I8: return "I8";
-    case DType::U8: return "U8";
-  }
-  return "UNKNOWN";
-}
 
-size_t dtype_size(DType dtype) {
-  switch (dtype) {
-    case DType::F32: return 4;
-    case DType::F16: return 2;
-    case DType::BF16: return 2;
-    case DType::F8E5M2: return 1;
-    case DType::F8E4M3: return 1;
-    case DType::I32: return 4;
-    case DType::I16: return 2;
-    case DType::I8: return 1;
-    case DType::U8: return 1;
-  }
-  return 0;
-}
 
 int Tensor::from_json(const std::string& name, const json& val, void* bytes_ptr, size_t bytes_size) {
   this->name = name;
   std::string dtype_str = val.value("dtype", ""); 
-  if (dtype_str == "F32") {
-    this->dtype = DType::F32;
-  } else if (dtype_str == "F16") {
-    this->dtype = DType::F16;
-  } else if (dtype_str == "BF16") {
-    this->dtype = DType::BF16;
-  } else if (dtype_str == "F8_E5M2") {
-    this->dtype = DType::F8E5M2;
-  } else if (dtype_str == "F8_E4M3") {
-    this->dtype = DType::F8E4M3;
-  } else if (dtype_str == "I32") {
-    this->dtype = DType::I32;
-  } else if (dtype_str == "I16") {
-    this->dtype = DType::I16;
-  } else if (dtype_str == "I8") {
-    this->dtype = DType::I8;
-  } else if (dtype_str == "U8") {
-    this->dtype = DType::U8;
-  } else {
-    std::cerr << "bad dtype" << std::endl;
-    return -1;
-  }
+  this->dtype = string_to_dtype(dtype_str);
   size_t dsize = dtype_size(this->dtype);
 
   size_t numel = 1;
